@@ -19,7 +19,11 @@ struct ContentView: View {
                     }
                 }
                 
-                BodyLabelsOverlay(bodyPoints: pose.bodyPoints, size: geo.size)
+                BodyLabelsOverlay(
+                    bodyPoints: pose.bodyPoints,
+                    size: geo.size,
+                    activeMovements: pose.activeMovements
+                )
                 
                 VStack {
                     Spacer()

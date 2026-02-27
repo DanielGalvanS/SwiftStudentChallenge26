@@ -8,9 +8,11 @@
 import SwiftUI
 import Vision
 
-struct BodyLabel {
+struct BodyLabel: Identifiable {
+    let id = UUID()
     let text: String
     let color: Color
+    let part: BodyPart
     let joint: VNHumanBodyPoseObservation.JointName?
     let offset: CGSize
 }
@@ -18,24 +20,28 @@ struct BodyLabel {
 struct BodyLabelsOverlay: View {
     let bodyPoints: [VNHumanBodyPoseObservation.JointName: CGPoint]
     let size: CGSize
+    let activeMovements: Set<BodyPart>
 
     private let labels: [BodyLabel] = [
-        BodyLabel(text: "ACCENT",       color: .purple, joint: .nose,       offset: CGSize(width: 0, height: -50)),
-        BodyLabel(text: "MELODY",      color: .blue,   joint: .rightWrist, offset: CGSize(width: 0, height: -30)),
-        BodyLabel(text: "OFF-BEAT", color: .orange, joint: .leftWrist,  offset: CGSize(width: 0, height: -30)),
+        BodyLabel(text: "ACCENT",       color: .purple, part: .head,      joint: .nose,       offset: CGSize(width: 0, height: -50)),
+        BodyLabel(text: "MELODY",      color: .blue,   part: .rightHand, joint: .rightWrist, offset: CGSize(width: 0, height: -30)),
+        BodyLabel(text: "OFF-BEAT", color: .orange, part: .leftHand,  joint: .leftWrist,  offset: CGSize(width: 0, height: -30)),
     ]
 
     var body: some View {
         ZStack {
-            // Labels individuales por joint
-            ForEach(labels, id: \.text) { label in
+            ForEach(labels) { label in
                 if let joint = label.joint,
                    let point = bodyPoints[joint] {
-                    LabelBubble(text: label.text, color: label.color)
-                        .position(
-                            x: visionToScreen(point, size: size).x + label.offset.width,
-                            y: visionToScreen(point, size: size).y + label.offset.height
-                        )
+                    LabelBubble(
+                        text: label.text,
+                        color: label.color,
+                        isActive: activeMovements.contains(label.part)
+                    )
+                    .position(
+                        x: visionToScreen(point, size: size).x + label.offset.width,
+                        y: visionToScreen(point, size: size).y + label.offset.height
+                    )
                 }
             }
 
@@ -43,11 +49,15 @@ struct BodyLabelsOverlay: View {
             if let leftKnee = bodyPoints[.leftKnee],
                let rightKnee = bodyPoints[.rightKnee] {
                 let mid = midpoint(leftKnee, rightKnee)
-                LabelBubble(text: "PULSE", color: .green)
-                    .position(
-                        x: visionToScreen(mid, size: size).x,
-                        y: visionToScreen(mid, size: size).y - 30
-                    )
+                LabelBubble(
+                    text: "PULSE",
+                    color: .green,
+                    isActive: activeMovements.contains(.knees)
+                )
+                .position(
+                    x: visionToScreen(mid, size: size).x,
+                    y: visionToScreen(mid, size: size).y - 30
+                )
             }
         }
     }
@@ -76,6 +86,7 @@ struct BodyLabelsOverlay: View {
 struct LabelBubble: View {
     let text: String
     let color: Color
+    let isActive: Bool
 
     var body: some View {
         Text(text)
@@ -85,10 +96,16 @@ struct LabelBubble: View {
             .padding(.vertical, 5)
             .background(
                 Capsule()
-                    .fill(color.opacity(0.85))
+                    .fill(isActive ? color : color.opacity(0.6))
+                    .shadow(color: isActive ? color : .clear, radius: isActive ? 12 : 0)
                     .overlay(
-                        Capsule().strokeBorder(.white.opacity(0.4), lineWidth: 1)
+                        Capsule().strokeBorder(
+                            isActive ? .white : .white.opacity(0.3),
+                            lineWidth: isActive ? 2 : 1
+                        )
                     )
             )
+            .scaleEffect(isActive ? 1.2 : 1.0)
+            .animation(.spring(response: 0.2, dampingFraction: 0.5), value: isActive)
     }
 }
