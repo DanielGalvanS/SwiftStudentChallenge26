@@ -19,6 +19,8 @@ struct ContentView: View {
                     }
                 }
                 
+                BodyLabelsOverlay(bodyPoints: pose.bodyPoints, size: geo.size)
+                
                 VStack {
                     Spacer()
                     Text(pose.isCalibrated ? "✅ Cuerpo detectado" : "⏳ Buscando cuerpo...")
