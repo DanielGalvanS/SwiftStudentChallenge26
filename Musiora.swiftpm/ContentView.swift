@@ -34,21 +34,20 @@ struct ContentView: View {
     }
     
     func visionToScreen(_ point: CGPoint, size: CGSize) -> CGPoint {
-        // Buffer de cámara es 4:3, pantalla es más alta
-        // resizeAspectFill escala al alto y recorta los lados
         let videoAspect: CGFloat = 4.0 / 3.0
         let screenAspect: CGFloat = size.height / size.width
-        
+
+        // Vision origin: bottom-left, Y up → invertir Y
+        // X: Vision no tiene espejo, pero el preview sí → espejear X
         var x = point.x * size.width
-        let y = point.y * size.height
-        
+        let y = (1 - point.y) * size.height
+
         if screenAspect > videoAspect {
-            // Pantalla más alta — video se recorta horizontalmente
             let scaledWidth = size.height / videoAspect
             let offset = (scaledWidth - size.width) / 2
             x = point.x * scaledWidth - offset
         }
-        
+
         return CGPoint(x: x, y: y)
     }
 }
