@@ -39,7 +39,7 @@ struct ContentView: View {
                     Spacer()
                     RhythmGuidePanel(
                         currentBeat: pose.currentBeat,
-                        activeMovements: pose.activeMovements
+                        correctHits: pose.correctHits
                     )
                     .padding(.bottom, 80)
                 }

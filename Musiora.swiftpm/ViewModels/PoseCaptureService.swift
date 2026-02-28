@@ -9,9 +9,11 @@
 import Vision
 import CoreImage
 
+typealias PoseData = (points: [VNHumanBodyPoseObservation.JointName: CGPoint], area: CGFloat)
+
 actor PoseCaptureService {
     nonisolated let captureSession = AVCaptureSession()
-    private(set) var poseStream: AsyncStream<[VNHumanBodyPoseObservation.JointName: CGPoint]>?
+    private(set) var poseStream: AsyncStream<PoseData>?
     private var outputDelegate: PoseOutputDelegate?
 
     private let sessionQueue = DispatchSerialQueue(
@@ -85,7 +87,7 @@ actor PoseCaptureService {
 
 // MARK: - Delegate
 private final class PoseOutputDelegate: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
-    typealias BodyPoints = [VNHumanBodyPoseObservation.JointName: CGPoint]
+    typealias BodyPoints = PoseData
 
     let poseStream: AsyncStream<BodyPoints>
     private let continuation: AsyncStream<BodyPoints>.Continuation
@@ -123,7 +125,8 @@ private final class PoseOutputDelegate: NSObject, AVCaptureVideoDataOutputSample
         }) else { return }
 
         let points = extractPoints(from: observation)
-        continuation.yield(points)
+        let area = poseArea(from: points)
+        continuation.yield((points: points, area: area))
     }
     
     private func areaOf(_ obs: VNHumanBodyPoseObservation) -> CGFloat {
@@ -154,5 +157,15 @@ private final class PoseOutputDelegate: NSObject, AVCaptureVideoDataOutputSample
         }
 
         return points
+    }
+    
+    private func poseArea(from points: [VNHumanBodyPoseObservation.JointName: CGPoint]) -> CGFloat {
+        let locations = Array(points.values)
+        guard let minX = locations.map({ $0.x }).min(),
+              let maxX = locations.map({ $0.x }).max(),
+              let minY = locations.map({ $0.y }).min(),
+              let maxY = locations.map({ $0.y }).max()
+        else { return 0.35 }
+        return (maxX - minX) * (maxY - minY)
     }
 }

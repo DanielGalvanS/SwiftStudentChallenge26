@@ -53,7 +53,7 @@ struct RhythmGuideView: View {
 
 struct RhythmGuidePanel: View {
     let currentBeat: Int
-    let activeMovements: Set<BodyPart>
+    let correctHits: Set<BodyPart>
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 10) {
@@ -61,7 +61,7 @@ struct RhythmGuidePanel: View {
                 RhythmGuideView(
                     pattern: pattern,
                     currentBeat: currentBeat,
-                    userHit: activeMovements.contains(pattern.part)
+                    userHit: correctHits.contains(pattern.part)
                 )
             }
         }
