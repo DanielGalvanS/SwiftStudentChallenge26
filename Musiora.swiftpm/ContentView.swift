@@ -34,6 +34,15 @@ struct ContentView: View {
                         .clipShape(Capsule())
                         .padding(.bottom, 40)
                 }
+                
+                VStack {
+                    Spacer()
+                    RhythmGuidePanel(
+                        currentBeat: pose.currentBeat,
+                        activeMovements: pose.activeMovements
+                    )
+                    .padding(.bottom, 80)
+                }
             }
         }
         .task { await pose.start() }

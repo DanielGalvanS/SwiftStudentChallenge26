@@ -15,13 +15,19 @@ final class PoseDetectorVM {
     private(set) var bodyPoints: [VNHumanBodyPoseObservation.JointName: CGPoint] = [:]
     private(set) var isCalibrated: Bool = false
     private(set) var activeMovements: Set<BodyPart> = []
-
+    
+    private let beatClock = BeatClock()
+    private(set) var currentBeat: Int = 0
     private let captureService = PoseCaptureService()
     private let movementDetector = MovementDetector()
 
     var session: AVCaptureSession { captureService.captureSession }
 
     func start() async {
+        beatClock.onBeat = { [weak self] beat in
+                self?.currentBeat = beat
+            }
+            beatClock.start()
         movementDetector.onMovement = { [weak self] part in
             self?.flash(part: part)
         }

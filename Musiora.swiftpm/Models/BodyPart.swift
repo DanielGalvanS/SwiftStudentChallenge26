@@ -8,7 +8,7 @@
 import Vision
 import SwiftUI
 
-enum BodyPart: String, CaseIterable {
+enum BodyPart: String, CaseIterable, Hashable {
     case head
     case leftHand
     case rightHand
