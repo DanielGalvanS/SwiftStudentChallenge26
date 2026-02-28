@@ -10,21 +10,28 @@ import Foundation
 
 struct MovementConfig {
     let threshold: CGFloat  // altura mínima del pico para contar
-    
+
     enum Axis {
         case vertical
         case horizontal
         case both
     }
-    
+
     enum Direction {
         case positive
         case negative
         case any
     }
-    
+
+    // Cómo combinar múltiples joints en un solo valor
+    enum Aggregation {
+        case average  // promedio — bueno cuando todos los joints se mueven juntos
+        case maxY     // la Y más alta — bueno cuando los joints se alternan (ej: rodillas al marchar)
+    }
+
     let axis: Axis
     let direction: Direction
+    let aggregation: Aggregation
 }
 
 @MainActor
@@ -41,10 +48,10 @@ final class MovementDetector {
 
     // Thresholds base — se escalan con el área
     private let baseConfigs: [BodyPart: MovementConfig] = [
-        .knees:     MovementConfig(threshold: 0.020, axis: .vertical, direction: .positive),  // marchar = rodilla sube
-        .leftHand:  MovementConfig(threshold: 0.025, axis: .vertical, direction: .negative),  // golpear = muñeca baja
-        .rightHand: MovementConfig(threshold: 0.025, axis: .vertical, direction: .negative),  // golpear = muñeca baja
-        .head:      MovementConfig(threshold: 0.015, axis: .vertical, direction: .negative),  // asentir = cabeza baja
+        .knees:     MovementConfig(threshold: 0.020, axis: .vertical, direction: .positive, aggregation: .maxY),    // maxY: captura la rodilla que sube, no el promedio de ambas
+        .leftHand:  MovementConfig(threshold: 0.080, axis: .vertical, direction: .negative, aggregation: .average),
+        .rightHand: MovementConfig(threshold: 0.080, axis: .vertical, direction: .negative, aggregation: .average),
+        .head:      MovementConfig(threshold: 0.015, axis: .vertical, direction: .negative, aggregation: .average),
     ]
 
     var onMovement: ((BodyPart) -> Void)?
@@ -55,7 +62,7 @@ final class MovementDetector {
         let typicalArea: CGFloat = 0.35  // valor de Apple
         let scale = poseArea / typicalArea
         // Clamp entre 0.5x y 2x para no volverse loco
-        let clampedScale = min(max(scale, 0.5), 2.0)
+        let clampedScale = min(max(scale, 0.75), 1.5)
         return base.threshold * clampedScale
     }
 
@@ -67,11 +74,15 @@ final class MovementDetector {
 
             let currentPositions = part.joints.compactMap { points[$0] }
             guard !currentPositions.isEmpty else { continue }
-            let currentCenter = average(currentPositions)
+
+            let trackingY: CGFloat = switch config.aggregation {
+            case .average: average(currentPositions).y
+            case .maxY:    currentPositions.map(\.y).max() ?? 0
+            }
 
             // History se actualiza siempre (incluso durante cooldown)
             var values = history[part] ?? []
-            values.append(currentCenter.y)
+            values.append(trackingY)
             if values.count > historySize { values.removeFirst() }
             history[part] = values
 
