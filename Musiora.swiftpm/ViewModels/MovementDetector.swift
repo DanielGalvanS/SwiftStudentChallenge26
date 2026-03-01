@@ -9,7 +9,7 @@ import Vision
 import Foundation
 
 struct MovementConfig {
-    let threshold: CGFloat  // altura mínima del pico para contar
+    let threshold: CGFloat  // minimum peak height to count
 
     enum Axis {
         case vertical
@@ -23,10 +23,10 @@ struct MovementConfig {
         case any
     }
 
-    // Cómo combinar múltiples joints en un solo valor
+    // How to combine multiple joints into a single value
     enum Aggregation {
-        case average  // promedio — bueno cuando todos los joints se mueven juntos
-        case maxY     // la Y más alta — bueno cuando los joints se alternan (ej: rodillas al marchar)
+        case average  // mean — good when all joints move together
+        case maxY     // highest Y — good when joints alternate (e.g. knees while marching)
     }
 
     let axis: Axis
@@ -39,16 +39,16 @@ final class MovementDetector {
     private var history: [BodyPart: [CGFloat]] = [:]
     private let historySize = 3
 
-    // Cooldown por parte — evita doble detección en el mismo golpe
+    // Per-part cooldown — prevents double-detection on the same hit
     private var lastDetection: [BodyPart: Date] = [:]
-    private let cooldown: TimeInterval = 0.20  // 200ms mínimo entre golpes
+    private let cooldown: TimeInterval = 0.20  // 200ms minimum between hits
 
-    // Área actual del pose — se actualiza cada frame
-    var poseArea: CGFloat = 0.35  // valor típico de Apple como default
+    // Current pose area — updated every frame
+    var poseArea: CGFloat = 0.35  // Apple's typical default value
 
-    // Thresholds base — se escalan con el área
+    // Base thresholds — scaled by pose area
     private let baseConfigs: [BodyPart: MovementConfig] = [
-        .knees:     MovementConfig(threshold: 0.020, axis: .vertical, direction: .positive, aggregation: .maxY),    // maxY: captura la rodilla que sube, no el promedio de ambas
+        .knees:     MovementConfig(threshold: 0.020, axis: .vertical, direction: .positive, aggregation: .maxY),    // maxY: captures the rising knee, not the average of both
         .leftHand:  MovementConfig(threshold: 0.080, axis: .vertical, direction: .negative, aggregation: .average),
         .rightHand: MovementConfig(threshold: 0.080, axis: .vertical, direction: .negative, aggregation: .average),
         .head:      MovementConfig(threshold: 0.015, axis: .vertical, direction: .negative, aggregation: .average),
@@ -56,12 +56,12 @@ final class MovementDetector {
 
     var onMovement: ((BodyPart) -> Void)?
 
-    // Threshold escalado por área — igual que Apple escala drawingScale
+    // Area-scaled threshold — same approach Apple uses for drawingScale
     private func scaledThreshold(for part: BodyPart) -> CGFloat {
         guard let base = baseConfigs[part] else { return 0.02 }
-        let typicalArea: CGFloat = 0.35  // valor de Apple
+        let typicalArea: CGFloat = 0.35  // Apple's reference value
         let scale = poseArea / typicalArea
-        // Clamp entre 0.5x y 2x para no volverse loco
+        // Clamp between 0.75x and 1.5x to avoid extreme scaling
         let clampedScale = min(max(scale, 0.75), 1.5)
         return base.threshold * clampedScale
     }
@@ -80,13 +80,13 @@ final class MovementDetector {
             case .maxY:    currentPositions.map(\.y).max() ?? 0
             }
 
-            // History se actualiza siempre (incluso durante cooldown)
+            // History always updates (even during cooldown)
             var values = history[part] ?? []
             values.append(trackingY)
             if values.count > historySize { values.removeFirst() }
             history[part] = values
 
-            // Cooldown activo → skip detección pero mantener history fresco
+            // Active cooldown → skip detection but keep history fresh
             if let last = lastDetection[part], now.timeIntervalSince(last) < cooldown { continue }
 
             guard values.count == historySize else { continue }
@@ -101,16 +101,16 @@ final class MovementDetector {
 
             switch config.direction {
             case .positive:
-                // Máximo local en posición: rodilla en lo más alto al marchar
+                // Local position maximum: knee at its highest while marching
                 let isPeak = prev1 > prev2 && prev1 > curr
                 magnitude = prev1 - min(prev2, curr)
                 detected = isPeak && magnitude > threshold
 
             case .negative:
-                // Pico de velocidad descendente: detecta el MOMENTO del golpe (no el valle)
-                // vel_a = velocidad frame 0→1 (positivo = mano bajando)
-                // vel_b = velocidad frame 1→2 (positivo = mano bajando)
-                // Pico cuando vel_a > vel_b: la mano estaba acelerando y ahora desacelera = impacto
+                // Downward velocity peak: detects the MOMENT of impact (not the valley)
+                // vel_a = velocity frame 0→1 (positive = hand moving down)
+                // vel_b = velocity frame 1→2 (positive = hand moving down)
+                // Peak when vel_a > vel_b: hand was accelerating then decelerates = impact
                 let vel_a = prev2 - prev1
                 let vel_b = prev1 - curr
                 magnitude = vel_a

@@ -17,20 +17,20 @@ struct WelcomeView: View {
             VStack(spacing: 36) {
                 Spacer()
 
-                // Título
+                // Title
                 VStack(spacing: 10) {
                     Text("Musiora")
                         .font(.system(size: 56, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
 
-                    Text("Los pianistas tardan años en aprender\na mover cada parte del cuerpo\ncon un ritmo distinto.")
+                    Text("Pianists spend years learning\nto move each body part\nwith a different rhythm.")
                         .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(.white.opacity(0.6))
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
                 }
 
-                // Las 4 partes con sus patrones
+                // The 4 parts with their patterns
                 VStack(spacing: 16) {
                     ForEach(BodyPart.allCases, id: \.self) { part in
                         HStack(spacing: 14) {
@@ -56,16 +56,16 @@ struct WelcomeView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 .padding(.horizontal, 32)
 
-                Text("Tú lo vas a experimentar en 3 minutos.")
+                Text("You'll experience it in 3 minutes.")
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.5))
                     .multilineTextAlignment(.center)
 
                 Spacer()
 
-                // Botón
+                // Button
                 Button(action: onStart) {
-                    Text("Empezar")
+                    Text("Start")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)

@@ -14,7 +14,7 @@ final class AudioEngine {
     private var savedVolumes: [BodyPart: Float] = [:]
     private(set) var isReady = false
 
-    // Duración exacta del loop: 16 beats a 90 BPM = 10.6667s
+    // Exact loop duration: 16 beats at 90 BPM = 10.6667s
     private static let bpm: Double   = 90
     private static let beats: Double = 16
     private static let loopDuration  = beats * 60.0 / bpm  // 10.6667s
@@ -44,11 +44,11 @@ final class AudioEngine {
                                               frameCapacity: AVAudioFrameCount(file.length)),
                 (try? file.read(into: raw)) != nil
             else {
-                print("⚠️ AudioEngine: no se pudo cargar \(name).aif")
+                print("⚠️ AudioEngine: could not load \(name).aif")
                 continue
             }
 
-            // Recortar al largo musical exacto → elimina el silencio del final
+            // Trim to exact musical length → removes trailing silence
             let buffer = trimmed(raw)
 
             let player = AVAudioPlayerNode()
@@ -60,14 +60,14 @@ final class AudioEngine {
         }
 
         guard !players.isEmpty else {
-            print("⚠️ AudioEngine: ningún track cargado")
+            print("⚠️ AudioEngine: no tracks loaded")
             return
         }
 
         do {
             try engine.start()
             isReady = true
-            print("✅ AudioEngine listo — \(players.count)/4 tracks")
+            print("✅ AudioEngine ready — \(players.count)/4 tracks")
         } catch {
             print("⚠️ AudioEngine error: \(error)")
         }
@@ -77,7 +77,7 @@ final class AudioEngine {
 
     func startLoops() {
         guard isReady else { return }
-        // Sincronizar todos los tracks al mismo AVAudioTime exacto
+        // Sync all tracks to the exact same AVAudioTime
         if let renderTime = engine.outputNode.lastRenderTime,
            renderTime.isSampleTimeValid {
             let startSample = renderTime.sampleTime + AVAudioFramePosition(renderTime.sampleRate * 0.1)
@@ -121,14 +121,14 @@ final class AudioEngine {
         players[part]?.volume = volume
     }
 
-    // MARK: - Trim buffer al largo musical exacto
+    // MARK: - Trim buffer to exact musical length
 
     private func trimmed(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer {
         let sampleRate   = buffer.format.sampleRate
         let targetFrames = AVAudioFrameCount(sampleRate * Self.loopDuration)
         let frames       = min(targetFrames, buffer.frameLength)
 
-        // Si ya es más corto que el target, devolver tal cual
+        // If already shorter than target, return as-is
         guard frames < buffer.frameLength,
               let out = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: frames),
               let src = buffer.floatChannelData,

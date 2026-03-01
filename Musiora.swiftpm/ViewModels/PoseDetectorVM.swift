@@ -24,9 +24,9 @@ final class PoseDetectorVM {
     private(set) var bodyPoints: [VNHumanBodyPoseObservation.JointName: CGPoint] = [:]
     private(set) var isCalibrated: Bool = false
 
-    // Cualquier movimiento detectado → flash en etiquetas AR
+    // Any detected movement → flash on AR labels
     private(set) var activeMovements: Set<BodyPart> = []
-    // Movimiento correcto en el beat → verde en rhythm guide
+    // Correct movement on the beat → green on rhythm guide
     private(set) var correctHits: Set<BodyPart> = []
 
     // MARK: - Rhythm
@@ -40,13 +40,18 @@ final class PoseDetectorVM {
 
     private(set) var phase: GamePhase = .pulse
     private(set) var guidesVisible: Set<BodyPart> = [.knees]
-    private(set) var gameActive: Bool = false   // true cuando el juego arranca (cuerpo detectado)
-    private(set) var isPaused: Bool = false     // true cuando el cuerpo se pierde durante el juego
+    private(set) var gameActive: Bool = false   // true once the game starts
+    private(set) var isPaused: Bool = false     // true when body is lost during the game
     private var uncalibratedFrames: Int = 0
     private let pauseThreshold: Int = 15        // ~0.5s a 30fps antes de pausar
     private var phaseHits: Int = 0
     private var isTransitioning: Bool = false
     private var autoAdvanceTask: Task<Void, Never>?
+
+    // MARK: - AR Start button
+    private(set) var startProgress: Double = 0   // 0→1, anillo de progreso
+    private(set) var countdown: Int = 0          // 3, 2, 1, 0 (Go!)
+    private(set) var isCountingDown: Bool = false
 
     // MARK: - Services
 
@@ -68,10 +73,10 @@ final class PoseDetectorVM {
             self?.handleMovement(part: part)
         }
 
-        // Preparar audio con antelación (carga archivos, no emite sonido aún)
+        // Prepare audio in advance (loads files, no sound yet)
         audioEngine.prepare()
 
-        // Arrancar cámara
+        // Start camera
         await captureService.start()
         guard let stream = await captureService.poseStream else { return }
 
@@ -84,13 +89,17 @@ final class PoseDetectorVM {
             movementDetector.poseArea = data.area
             movementDetector.update(points: data.points)
 
-            // Iniciar el juego la primera vez que el cuerpo es detectado
-            if isCalibrated && !gameActive {
-                gameActive = true
-                beginGame()
+            // AR button: accumulate/decay progress while body is ready
+            if isCalibrated && !gameActive && !isCountingDown {
+                if isHandNearButton(points: data.points) {
+                    startProgress = min(startProgress + (1.0 / 45.0), 1.0)  // ~1.5s a 30fps
+                    if startProgress >= 1.0 { triggerCountdown() }
+                } else {
+                    startProgress = max(startProgress - (1.0 / 15.0), 0.0)  // decae rápido
+                }
             }
 
-            // Pausar/reanudar si el cuerpo se pierde durante el juego
+            // Pause/resume if body is lost during the game
             if gameActive && phase != .results {
                 if isCalibrated {
                     uncalibratedFrames = 0
@@ -133,6 +142,37 @@ final class PoseDetectorVM {
         beatClock.start()
         audioEngine.unsilenceAll(duration: 0.3)
         startAutoAdvance()
+    }
+
+    // MARK: - AR Start button
+
+    private func isHandNearButton(points: [VNHumanBodyPoseObservation.JointName: CGPoint]) -> Bool {
+        let center = CGPoint(x: 0.5, y: 0.5)
+        let radius: CGFloat = 0.15
+        for joint in [VNHumanBodyPoseObservation.JointName.leftWrist, .rightWrist] {
+            if let p = points[joint] {
+                let dx = p.x - center.x
+                let dy = p.y - center.y
+                if (dx * dx + dy * dy) < (radius * radius) { return true }
+            }
+        }
+        return false
+    }
+
+    private func triggerCountdown() {
+        isCountingDown = true
+        startProgress = 0
+        Task {
+            for n in [3, 2, 1] {
+                countdown = n
+                try? await Task.sleep(for: .seconds(1))
+            }
+            countdown = 0   // ¡Ya!
+            try? await Task.sleep(for: .milliseconds(500))
+            gameActive = true
+            beginGame()
+            isCountingDown = false
+        }
     }
 
     // MARK: - Beat
@@ -193,7 +233,7 @@ final class PoseDetectorVM {
         switch phase {
 
         case .pulse:
-            // Guía desaparece → test Dalcroze
+            // Guide disappears → Dalcroze test
             guidesVisible.remove(.knees)
             phase = .silentPulse
             Task {
@@ -204,7 +244,7 @@ final class PoseDetectorVM {
             startAutoAdvance()
 
         case .silentPulse:
-            // Música regresa → agregar mano izquierda
+            // Music returns → add left hand
             phase = .offbeat
             guidesVisible.insert(.leftHand)
             Task {

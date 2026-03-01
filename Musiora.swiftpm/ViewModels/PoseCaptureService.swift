@@ -30,7 +30,7 @@ actor PoseCaptureService {
     }
 
     func start() async {
-        // Verificar permisos
+        // Check permissions
         let status = AVCaptureDevice.authorizationStatus(for: .video)
         guard status == .authorized else {
             await AVCaptureDevice.requestAccess(for: .video)
@@ -49,23 +49,23 @@ actor PoseCaptureService {
         captureSession.beginConfiguration()
         defer { captureSession.commitConfiguration() }
 
-        // Limpiar configuración previa
+        // Clear previous configuration
         captureSession.inputs.forEach(captureSession.removeInput)
         captureSession.outputs.forEach(captureSession.removeOutput)
 
-        // Input — cámara frontal
+        // Input — front camera
         guard let input = AVCaptureDeviceInput.createCameraInput(position: .front),
               captureSession.canAddInput(input) else { return }
         captureSession.addInput(input)
 
-        // Frame rate óptimo para Vision (30fps es suficiente)
+        // Optimal frame rate for Vision (30fps is enough)
         input.device.configureFrameRate(30)
 
-        // Output — pixel format BGRA igual que Apple
+        // Output — BGRA pixel format, same as Apple
         let output = AVCaptureVideoDataOutput()
         let pixelTypeKey = String(kCVPixelBufferPixelFormatTypeKey)
         output.videoSettings = [pixelTypeKey: kCVPixelFormatType_32BGRA]
-        output.alwaysDiscardsLateVideoFrames = true  // evita lag
+        output.alwaysDiscardsLateVideoFrames = true  // prevents lag
 
         guard captureSession.canAddOutput(output) else { return }
         captureSession.addOutput(output)
@@ -77,7 +77,7 @@ actor PoseCaptureService {
             connection.videoOrientation = .portrait
         }
         if connection.isVideoMirroringSupported {
-            // Espejo en el preview para cámara frontal
+            // Mirror preview for front camera
             connection.isVideoMirrored = true
         }
 
@@ -92,10 +92,10 @@ private final class PoseOutputDelegate: NSObject, AVCaptureVideoDataOutputSample
     let poseStream: AsyncStream<BodyPoints>
     private let continuation: AsyncStream<BodyPoints>.Continuation
 
-    // Reusar el request igual que Apple
+    // Reuse the request, same as Apple
     nonisolated(unsafe) private let bodyPoseRequest = VNDetectHumanBodyPoseRequest()
 
-    // CIContext reutilizable — igual que Apple, evita allocations por frame
+    // Reusable CIContext — same as Apple, avoids per-frame allocations
     nonisolated(unsafe) private let ciContext = CIContext(options: nil)
 
     override init() {
@@ -108,12 +108,12 @@ private final class PoseOutputDelegate: NSObject, AVCaptureVideoDataOutputSample
         didOutput sampleBuffer: CMSampleBuffer,
         from connection: AVCaptureConnection
     ) {
-        // Convertir a CGImage igual que Apple — sin orientación manual
+        // Convert to CGImage, same as Apple — no manual orientation
         guard let imageBuffer = sampleBuffer.imageBuffer else { return }
         let ciImage = CIImage(cvPixelBuffer: imageBuffer)
         guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else { return }
 
-        // VNImageRequestHandler con CGImage — sin parámetro de orientación
+        // VNImageRequestHandler with CGImage — no orientation parameter
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
 
         do {

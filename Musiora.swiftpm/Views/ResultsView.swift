@@ -20,17 +20,17 @@ struct ResultsView: View {
 
                 // Título
                 VStack(spacing: 8) {
-                    Text("Independencia\nMotriz")
+                    Text("Motor\nIndependence")
                         .font(.system(size: 42, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
 
-                    Text("Así se entrena en los conservatorios.")
+                    Text("This is how musicians train at conservatories.")
                         .font(.system(size: 15, weight: .regular, design: .rounded))
                         .foregroundStyle(.white.opacity(0.5))
                 }
 
-                // Precisión por parte
+                // Accuracy per part
                 VStack(spacing: 14) {
                     ForEach(BodyPart.allCases, id: \.self) { part in
                         if let s = score[part] {
@@ -40,7 +40,7 @@ struct ResultsView: View {
                                     .foregroundStyle(part.color)
                                     .frame(width: 72, alignment: .leading)
 
-                                // Barra de precisión
+                                // Accuracy bar
                                 GeometryReader { geo in
                                     ZStack(alignment: .leading) {
                                         RoundedRectangle(cornerRadius: 4)
@@ -67,7 +67,7 @@ struct ResultsView: View {
                 .padding(.horizontal, 28)
 
                 // Mensaje final
-                Text("Eso es lo que los pianistas\nentregan por años.\n\nLo acabas de experimentar\nen 3 minutos.")
+                Text("This is what pianists\ndedicate years to.\n\nYou just experienced it\nin 3 minutes.")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.75))
                     .multilineTextAlignment(.center)
@@ -75,9 +75,9 @@ struct ResultsView: View {
 
                 Spacer()
 
-                // Botón reiniciar
+                // Restart button
                 Button(action: onRestart) {
-                    Text("Intentar de nuevo")
+                    Text("Try Again")
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)

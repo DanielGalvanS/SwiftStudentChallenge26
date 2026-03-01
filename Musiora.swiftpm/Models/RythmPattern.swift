@@ -9,7 +9,7 @@ import SwiftUI
 
 struct RhythmPattern {
     let part: BodyPart
-    // 8 beats — true = debe moverse en ese beat
+    // 8 beats — true = should move on that beat
     let beats: [Bool]
 
     static let all: [RhythmPattern] = [

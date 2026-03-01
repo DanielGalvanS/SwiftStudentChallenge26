@@ -10,11 +10,11 @@ import Foundation
 @MainActor
 @Observable
 final class BeatClock {
-    // 90 BPM = 0.667s por beat
+    // 90 BPM = 0.667s per beat
     static let bpm: Double = 90
     static let beatDuration: Double = 60.0 / bpm  // 0.667s
 
-    // 8 subdivisions por compás (2 compases de 4/4)
+    // 8 subdivisions per bar (2 bars of 4/4)
     private(set) var currentBeat: Int = 0  // 0-7
     private(set) var isRunning: Bool = false
 
@@ -31,8 +31,8 @@ final class BeatClock {
                 guard let self else { break }
                 await self.tick()
                 beatIndex += 1
-                // Calcula cuándo debe sonar el PRÓXIMO beat desde el tiempo absoluto de inicio
-                // → auto-corrige cualquier drift acumulado en beats anteriores
+                // Calculates when the NEXT beat should fire from the absolute start time
+                // → auto-corrects any accumulated drift from previous beats
                 let nextBeatTime = startTime.addingTimeInterval(Double(beatIndex) * BeatClock.beatDuration)
                 let delay = nextBeatTime.timeIntervalSinceNow
                 if delay > 0 {

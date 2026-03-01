@@ -8,15 +8,15 @@
 import Foundation
 
 enum GamePhase: Equatable {
-    case pulse          // Fase 1: Solo rodillas con guía
-    case silentPulse    // Fase 1B: Test Dalcroze — música off, cuerpo sigue solo
-    case offbeat        // Fase 2: + mano izquierda
-    case melody         // Fase 3: + mano derecha
-    case accent         // Fase 4: Las 4 partes simultáneas
-    case freePlay       // Fase 5: Sin guías — independencia motriz real
-    case results        // Pantalla final con métricas
+    case pulse          // Phase 1: Knees only with guide
+    case silentPulse    // Phase 1B: Dalcroze test — music off, body keeps going alone
+    case offbeat        // Phase 2: + left hand
+    case melody         // Phase 3: + right hand
+    case accent         // Phase 4: All 4 parts simultaneously
+    case freePlay       // Phase 5: No guides — real motor independence
+    case results        // Final screen with metrics
 
-    /// Parte del cuerpo que se entrena en esta fase
+    /// Body part trained in this phase
     var focusPart: BodyPart? {
         switch self {
         case .pulse, .silentPulse: return .knees
@@ -27,7 +27,7 @@ enum GamePhase: Equatable {
         }
     }
 
-    /// Hits correctos necesarios para avanzar
+    /// Correct hits needed to advance
     var targetHits: Int {
         switch self {
         case .pulse:               return 6
@@ -39,7 +39,7 @@ enum GamePhase: Equatable {
         }
     }
 
-    /// Tiempo límite antes de avanzar automáticamente (segundos)
+    /// Time limit before auto-advancing (seconds)
     var timeLimit: TimeInterval {
         switch self {
         case .pulse:               return 45
@@ -52,15 +52,15 @@ enum GamePhase: Equatable {
         }
     }
 
-    /// Instrucción visible para el usuario
+    /// Instruction shown to the user
     var instruction: String {
         switch self {
-        case .pulse:       return "Marcha al ritmo con las rodillas"
-        case .silentPulse: return "Sigue marchando... sin música"
-        case .offbeat:     return "Agrega la mano izquierda"
-        case .melody:      return "Agrega la mano derecha"
-        case .accent:      return "Asiente con la cabeza en el beat 1"
-        case .freePlay:    return "¡Independencia motriz!"
+        case .pulse:       return "March to the beat with your knees"
+        case .silentPulse: return "Keep marching... without music"
+        case .offbeat:     return "Add your left hand"
+        case .melody:      return "Add your right hand"
+        case .accent:      return "Nod your head on beat 1"
+        case .freePlay:    return "Motor independence!"
         case .results:     return ""
         }
     }

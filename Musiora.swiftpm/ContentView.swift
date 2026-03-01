@@ -7,7 +7,7 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            // ── Cámara + juego ──────────────────────────────────────────
+            // ── Camera + game ───────────────────────────────────────────
             if gameStarted {
                 GeometryReader { geo in
                     ZStack {
@@ -20,32 +20,72 @@ struct ContentView: View {
                             activeMovements: pose.activeMovements
                         )
 
-                        // Overlay de pausa cuando se pierde el cuerpo
+                        // ── AR start button ──────────────────────────────
+                        if pose.isCalibrated && !pose.gameActive && !pose.isCountingDown {
+                            VStack(spacing: 14) {
+                                ZStack {
+                                    Circle()
+                                        .fill(.white.opacity(0.12))
+                                        .frame(width: 110, height: 110)
+
+                                    Circle()
+                                        .trim(from: 0, to: pose.startProgress)
+                                        .stroke(.white, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                                        .frame(width: 110, height: 110)
+                                        .rotationEffect(.degrees(-90))
+                                        .animation(.linear(duration: 0.05), value: pose.startProgress)
+
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 36))
+                                        .foregroundStyle(.white)
+                                }
+
+                                Text("Bring a hand close to start")
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.85))
+                            }
+                        }
+
+                        // ── Body search ──────────────────────────────────
+                        if !pose.isCalibrated && !pose.gameActive && !pose.isCountingDown {
+                            Text("Step in front of the camera")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(.black.opacity(0.55))
+                                .clipShape(Capsule())
+                        }
+
+                        // ── Countdown ────────────────────────────────────
+                        if pose.isCountingDown {
+                            Text(pose.countdown > 0 ? "\(pose.countdown)" : "Go!")
+                                .font(.system(size: 120, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .shadow(color: .white.opacity(0.4), radius: 20)
+                                .id(pose.countdown)
+                                .transition(.scale(scale: 1.4).combined(with: .opacity))
+                                .animation(.easeOut(duration: 0.25), value: pose.countdown)
+                        }
+
+                        // ── Pause – body lost ────────────────────────────
                         if pose.isPaused {
                             Color.black.opacity(0.6).ignoresSafeArea()
                             VStack(spacing: 12) {
-                                Text("Vuelve al encuadre")
+                                Text("Step back into frame")
                                     .font(.system(size: 20, weight: .bold, design: .rounded))
                                     .foregroundStyle(.white)
-                                Text("El juego continúa cuando te detecte")
+                                Text("The game resumes when you're detected")
                                     .font(.system(size: 14, weight: .regular, design: .rounded))
                                     .foregroundStyle(.white.opacity(0.6))
                             }
                             .multilineTextAlignment(.center)
                         }
 
+                        // ── Phase instruction ────────────────────────────
                         VStack {
                             Spacer()
-
-                            if !pose.isCalibrated && !pose.isPaused {
-                                Text("⏳ Buscando cuerpo...")
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(.black.opacity(0.55))
-                                    .clipShape(Capsule())
-                            } else if pose.gameActive && pose.phase != .results && !pose.isPaused {
+                            if pose.gameActive && pose.phase != .results && !pose.isPaused {
                                 Text(pose.phase.instruction)
                                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.white)
@@ -74,7 +114,7 @@ struct ContentView: View {
                 .transition(.opacity)
             }
 
-            // ── Bienvenida ──────────────────────────────────────────────
+            // ── Welcome ─────────────────────────────────────────────────
             if !gameStarted {
                 WelcomeView {
                     withAnimation(.easeInOut(duration: 0.5)) {
@@ -84,7 +124,7 @@ struct ContentView: View {
                 .transition(.opacity)
             }
 
-            // ── Resultados ──────────────────────────────────────────────
+            // ── Results ─────────────────────────────────────────────────
             if pose.phase == .results {
                 ResultsView(score: pose.score) {
                     pose.stop()
