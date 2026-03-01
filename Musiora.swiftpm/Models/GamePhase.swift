@@ -78,16 +78,16 @@ enum GamePhase: Equatable {
     /// Detailed instruction shown before the phase begins
     var tutorialText: String {
         switch self {
-        case .pulse:       
-            return "The circles at the bottom show the beat. Tap your knees like a bass drum exactly when the circle lights up! You need 6 correct hits to advance."
+        case .pulse:
+            return "The circles at the bottom show the beat. Tap both knees downward — like stomping a bass drum pedal — exactly when the circle lights up. You need 6 correct hits to advance."
         case .silentPulse: 
             return "The music will stop, but the beat continues in your head. Keep tapping your knees to the internal rhythm."
-        case .offbeat:     
-            return "Let's add a snare drum. Hit the air with your left hand exactly when its guide lights up."
-        case .melody:      
-            return "Time for the cymbal! Hit the air with your right hand on the new rhythm."
-        case .accent:      
-            return "Finally, nod your head on beat 1 like a true drummer."
+        case .offbeat:
+            return "Let's add the snare. Strike downward with your left hand — like hitting a drum pad — exactly when its guide lights up."
+        case .melody:
+            return "Now the cymbal. Strike downward with your right hand — same motion, like hitting a drum pad — on the new rhythm."
+        case .accent:
+            return "Finally, the accent. Nod your head downward on beat 1 — a single firm nod, like a drummer marking the top of the bar."
         case .freePlay:
             return "Now all four parts at once — knees, left hand, right hand, and head. Hit each one at the right moment. You have 30 seconds. Go!"
         case .results:     

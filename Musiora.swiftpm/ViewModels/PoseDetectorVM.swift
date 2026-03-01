@@ -12,7 +12,14 @@ import SwiftUI
 struct PartScore {
     var hits: Int = 0
     var attempts: Int = 0
+    var misses: Int = 0
+    /// hits / attempts — rewards precision, ignores missed beats
     var accuracy: Double { attempts > 0 ? Double(hits) / Double(attempts) : 0 }
+    /// hits / max(attempts, hits+misses) — penalizes both false positives and missed beats
+    var accuracyStrict: Double {
+        let denominator = max(attempts, hits + misses)
+        return denominator > 0 ? Double(hits) / Double(denominator) : 0
+    }
 }
 
 @MainActor
@@ -299,7 +306,7 @@ final class PoseDetectorVM {
     
     private func flashMissed(part: BodyPart) {
         missedHits.insert(part)
-        HapticManager.shared.playError()
+        score[part]?.misses += 1
         // Missed hits clear automatically on the next beat
     }
 

@@ -8,10 +8,13 @@ import SwiftUI
 struct AccuracyBarView: View {
     let part: BodyPart
     let score: PartScore
-    
+    let strict: Bool
+
     @State private var animatedWidth: CGFloat = 0
     @State private var animatedPercentage: Int = 0
-    
+
+    private var value: Double { strict ? score.accuracyStrict : score.accuracy }
+
     var body: some View {
         HStack(spacing: Theme.Layout.paddingMedium) {
             Text(part.label)
@@ -24,15 +27,22 @@ struct AccuracyBarView: View {
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Theme.Colors.overlayLight)
-                    
+
                     RoundedRectangle(cornerRadius: 4)
                         .fill(part.color)
                         .frame(width: animatedWidth)
                 }
                 .onAppear {
-                    let targetWidth = geo.size.width * CGFloat(score.accuracy)
+                    let targetWidth = geo.size.width * CGFloat(value)
                     withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
                         animatedWidth = targetWidth
+                    }
+                }
+                .onChange(of: strict) { _, _ in
+                    let targetWidth = geo.size.width * CGFloat(value)
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                        animatedWidth = targetWidth
+                        animatedPercentage = Int(value * 100)
                     }
                 }
             }
@@ -44,17 +54,16 @@ struct AccuracyBarView: View {
                 .frame(width: 42, alignment: .trailing)
                 .contentTransition(.numericText())
                 .onAppear {
-                    let targetPercentage = Int(score.accuracy * 100)
-                    animatePercentage(to: targetPercentage)
+                    animatePercentage(to: Int(value * 100))
                 }
         }
     }
-    
+
     private func animatePercentage(to target: Int) {
         let duration = 0.8
         let steps = target > 0 ? target : 1
         let stepDuration = duration / Double(steps)
-        
+
         Task {
             for i in 0...target {
                 try? await Task.sleep(for: .seconds(stepDuration))

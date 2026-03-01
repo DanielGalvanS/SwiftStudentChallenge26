@@ -18,12 +18,12 @@ struct WelcomeView: View {
                 Spacer()
 
                 // Title
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
                     Text("Musiora")
                         .font(Theme.Typography.displayMedium)
                         .foregroundStyle(Theme.Colors.textPrimary)
 
-                    Text("Pianists spend years learning\nto move each body part\nwith a different rhythm.")
+                    Text("Your brain is wired to sync\nyour movements together.\nMusicians spend years learning to break that.")
                         .font(Theme.Typography.bodyLarge)
                         .foregroundStyle(Theme.Colors.textSecondary)
                         .multilineTextAlignment(.center)
@@ -54,10 +54,11 @@ struct WelcomeView: View {
                 }
                 .padding(.horizontal, Theme.Layout.paddingXLarge)
 
-                Text("You'll experience it in 3 minutes.")
+                Text("Can you move your knees, hands,\nand head to different rhythms — at the same time?")
                     .font(Theme.Typography.bodyMedium)
                     .foregroundStyle(Theme.Colors.textTertiary)
                     .multilineTextAlignment(.center)
+                    .lineSpacing(3)
 
                 Spacer()
 
@@ -66,11 +67,15 @@ struct WelcomeView: View {
                     HapticManager.shared.playHeavy()
                     onStart()
                 }) {
-                    Text("Experience It")
+                    Text("Find Out")
                 }
                 .glassButtonStyle()
                 .padding(.horizontal, Theme.Layout.paddingXLarge)
-                .padding(.bottom, 48)
+
+                Text("Music composed in GarageBand")
+                    .font(Theme.Typography.labelSmall)
+                    .foregroundStyle(Theme.Colors.textTertiary.opacity(0.5))
+                    .padding(.bottom, 48)
             }
         }
     }
