@@ -15,7 +15,7 @@ struct RhythmPattern {
     static let all: [RhythmPattern] = [
         RhythmPattern(part: .knees,     beats: [true, true, true, true, true, true, true, true]),
         RhythmPattern(part: .leftHand,  beats: [false, true, false, true, false, true, false, true]),
-        RhythmPattern(part: .rightHand, beats: [true, false, false, true, false, true, false, false]),
+        RhythmPattern(part: .rightHand, beats: [true, true, false, true, true, true, true, true]),
         RhythmPattern(part: .head,      beats: [true, false, false, false, false, false, false, false]),
     ]
 }

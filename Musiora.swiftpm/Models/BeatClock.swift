@@ -24,11 +24,20 @@ final class BeatClock {
 
     func start() {
         isRunning = true
+        let startTime = Date()
         task = Task { [weak self] in
+            var beatIndex = 0
             while !Task.isCancelled {
                 guard let self else { break }
                 await self.tick()
-                try? await Task.sleep(for: .seconds(BeatClock.beatDuration))
+                beatIndex += 1
+                // Calcula cuándo debe sonar el PRÓXIMO beat desde el tiempo absoluto de inicio
+                // → auto-corrige cualquier drift acumulado en beats anteriores
+                let nextBeatTime = startTime.addingTimeInterval(Double(beatIndex) * BeatClock.beatDuration)
+                let delay = nextBeatTime.timeIntervalSinceNow
+                if delay > 0 {
+                    try? await Task.sleep(for: .seconds(delay))
+                }
             }
         }
     }

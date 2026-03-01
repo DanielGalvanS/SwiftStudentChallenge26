@@ -54,21 +54,26 @@ struct RhythmGuideView: View {
 struct RhythmGuidePanel: View {
     let currentBeat: Int
     let correctHits: Set<BodyPart>
+    let guidesVisible: Set<BodyPart>
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 10) {
-            ForEach(RhythmPattern.all, id: \.part) { pattern in
-                RhythmGuideView(
-                    pattern: pattern,
-                    currentBeat: currentBeat,
-                    userHit: correctHits.contains(pattern.part)
-                )
+        let visiblePatterns = RhythmPattern.all.filter { guidesVisible.contains($0.part) }
+        if !visiblePatterns.isEmpty {
+            VStack(alignment: .trailing, spacing: 10) {
+                ForEach(visiblePatterns, id: \.part) { pattern in
+                    RhythmGuideView(
+                        pattern: pattern,
+                        currentBeat: currentBeat,
+                        userHit: correctHits.contains(pattern.part)
+                    )
+                }
             }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.black.opacity(0.6))
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.black.opacity(0.6))
-        )
     }
 }

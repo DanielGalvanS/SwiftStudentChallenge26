@@ -40,7 +40,13 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "AppModule",
-            path: "."
+            path: ".",
+            resources: [
+                .process("Audio/pulse.aif"),
+                .process("Audio/offbeat.aif"),
+                .process("Audio/melody.aif"),
+                .process("Audio/accent.aif"),
+            ]
         )
     ],
     swiftLanguageVersions: [.version("6")]
