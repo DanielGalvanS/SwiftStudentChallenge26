@@ -12,33 +12,9 @@ final class HapticManager {
     
     private init() {}
     
-    func playTick() {
-        let generator = UIImpactFeedbackGenerator(style: .rigid)
-        generator.prepare()
-        generator.impactOccurred()
-    }
-    
-    func playSuccess() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.success)
-    }
-    
-    func playLight() {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
-    }
-    
-    func playHeavy() {
-        let generator = UIImpactFeedbackGenerator(style: .heavy)
-        generator.prepare()
-        generator.impactOccurred()
-    }
-    
-    func playError() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(.error)
-    }
+    func playTick() {}
+    func playSuccess() {}
+    func playLight() {}
+    func playHeavy() {}
+    func playError() {}
 }

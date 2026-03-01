@@ -46,9 +46,10 @@ final class PoseDetectorVM {
     private(set) var guidesVisible: Set<BodyPart> = [.knees]
     private(set) var gameActive: Bool = false   // true once the game starts
     private(set) var isPaused: Bool = false     // true when body is lost during the game
+    private(set) var isShowingTutorial: Bool = false
     private var uncalibratedFrames: Int = 0
     private let pauseThreshold: Int = 15        // ~0.5s a 30fps antes de pausar
-    private var phaseHits: Int = 0
+    private(set) var phaseHits: Int = 0
     private var isTransitioning: Bool = false
     private var autoAdvanceTask: Task<Void, Never>?
 
@@ -56,6 +57,7 @@ final class PoseDetectorVM {
     private(set) var startProgress: Double = 0   // 0→1, anillo de progreso
     private(set) var countdown: Int = 0          // 3, 2, 1, 0 (Go!)
     private(set) var isCountingDown: Bool = false
+    private(set) var hasStarted: Bool = false
 
     // MARK: - Services
 
@@ -69,6 +71,10 @@ final class PoseDetectorVM {
     )
 
     var session: AVCaptureSession { captureService.captureSession }
+
+    /// Parts shown in the rhythm guide panel — all unlocked parts at once.
+    /// Grows cumulatively as phases progress.
+    var guidesShown: Set<BodyPart> { guidesVisible }
 
     // MARK: - Start
 
@@ -94,10 +100,10 @@ final class PoseDetectorVM {
             movementDetector.update(points: data.points)
 
             // AR button: accumulate/decay progress while body is ready
-            if isCalibrated && !gameActive && !isCountingDown {
+            if isCalibrated && !gameActive && !isCountingDown && !isShowingTutorial {
                 if isHandNearButton(points: data.points) {
                     startProgress = min(startProgress + (1.0 / 45.0), 1.0)  // ~1.5s a 30fps
-                    if startProgress >= 1.0 { triggerCountdown() }
+                    if startProgress >= 1.0 { beginGame() }
                 } else {
                     startProgress = max(startProgress - (1.0 / 15.0), 0.0)  // decae rápido
                 }
@@ -122,8 +128,35 @@ final class PoseDetectorVM {
         beatClock.onBeat = { [weak self] beat in
             self?.handleBeat(beat)
         }
+        
+        // Stop any background clock and flush hit cache
+        beatClock.stop()
+        clearHitHistory()
+        
+        // Show tutorial immediately
+        isShowingTutorial = true
+    }
+    
+    func dismissTutorial() {
+        isShowingTutorial = false
+
+        // First tutorial ever: go through the countdown before starting the game.
+        if !hasStarted {
+            triggerCountdown()
+            return
+        }
+
+        clearHitHistory()
+
+        // If the game is paused (body out of frame), don't start the clock or audio yet —
+        // resumeGame() will do that when the user re-enters the frame.
+        guard !isPaused else { return }
+
+        for part in guidesVisible {
+            audioEngine.unlock(part)
+        }
+        audioEngine.syncAndPlay()
         beatClock.start()
-        audioEngine.startLoops()
         startAutoAdvance()
     }
 
@@ -138,13 +171,22 @@ final class PoseDetectorVM {
         beatClock.stop()
         audioEngine.silenceAll(duration: 0.2)
         autoAdvanceTask?.cancel()
+        clearHitHistory()
     }
 
     private func resumeGame() {
         isPaused = false
         uncalibratedFrames = 0
+        // If a tutorial is still showing, the clock and audio aren't running yet —
+        // dismissTutorial() will start them when the user taps Ready.
+        guard !isShowingTutorial else { return }
+        // Restore audio directly from guidesVisible — avoids stale savedVolumes
+        // that can be corrupted when silenceAll() is called twice (transition + pause).
+        for part in guidesVisible {
+            audioEngine.unlock(part)
+        }
+        audioEngine.syncAndPlay()
         beatClock.start()
-        audioEngine.unsilenceAll(duration: 0.3)
         startAutoAdvance()
     }
 
@@ -173,47 +215,56 @@ final class PoseDetectorVM {
             }
             countdown = 0   // ¡Ya!
             try? await Task.sleep(for: .milliseconds(500))
-            gameActive = true
-            beginGame()
             isCountingDown = false
+            hasStarted = true
+            gameActive = true
+            
+            // Kick off audio from beat 0, in sync with the clock
+            audioEngine.unlock(.knees)
+            audioEngine.syncAndPlay()
+
+            clearHitHistory()
+            beatClock.start()
+            startAutoAdvance()
         }
     }
 
     // MARK: - Beat
 
     private func handleBeat(_ beat: Int) {
-        // Check for missed beats from the PREVIOUS beat before moving to the new one
-        for part in BodyPart.allCases {
-            guard guidesVisible.contains(part) else { continue } // Only grade active parts
-            if patterns[part]?[currentBeat] == true && !correctHits.contains(part) {
-                flashMissed(part: part)
+
+        // Check for missed beats from the PREVIOUS beat BEFORE clearing correctHits,
+        // otherwise the check always fires (correctHits would be empty after clearing).
+        if gameActive && !isCountingDown && !isShowingTutorial {
+            let prevBeat = (beat - 1 < 0) ? 7 : (beat - 1)
+            for part in BodyPart.allCases {
+                guard guidesVisible.contains(part) else { continue }
+                if patterns[part]?[prevBeat] == true && !correctHits.contains(part) {
+                    flashMissed(part: part)
+                }
             }
         }
-        
-        // Clear old hits for the new beat
+
+        // Now safe to clear — missed check already ran against the old state
         correctHits.removeAll()
         wrongHits.removeAll()
         missedHits.removeAll()
-        
         currentBeat = beat
-        
-        // Register new attempts
-        for part in BodyPart.allCases {
-            guard guidesVisible.contains(part) else { continue }
-            if patterns[part]?[beat] == true {
-                score[part]?.attempts += 1
-            }
-        }
     }
 
     // MARK: - Movement
 
     private func handleMovement(part: BodyPart) {
-        // Only provide error feedback if the part is actively visible/playing
-        guard guidesVisible.contains(part) else { return }
-        
-        flash(part: part)
+        guard !isShowingTutorial else { return }
+        guard gameActive && !isCountingDown else { return }
 
+        // ALWAYS provide visual feedback (drum pad expansion)
+        flash(part: part)
+        
+        // Only grade if the part is actively visible/playing for the current phase
+        guard guidesVisible.contains(part) else { return }
+
+        score[part]?.attempts += 1
         if patterns[part]?[currentBeat] == true {
             score[part]?.hits += 1
             flashCorrect(part: part)
@@ -239,8 +290,9 @@ final class PoseDetectorVM {
     private func flashWrong(part: BodyPart) {
         wrongHits.insert(part)
         HapticManager.shared.playError()
+        // Clear on next beat (~667ms), consistent with correctHits and missedHits
         Task {
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: .milliseconds(600))
             wrongHits.remove(part)
         }
     }
@@ -268,61 +320,50 @@ final class PoseDetectorVM {
         isTransitioning = true
         phaseHits = 0
         autoAdvanceTask?.cancel()
+        
+        // Completely stop the clock and clear ghosts
+        beatClock.stop()
+        clearHitHistory()
 
         switch phase {
-
         case .pulse:
-            // Guide disappears → Dalcroze test
-            guidesVisible.remove(.knees)
-            phase = .silentPulse
-            Task {
-                try? await Task.sleep(for: .milliseconds(400))
-                self.audioEngine.silenceAll(duration: 0.6)
-            }
-            isTransitioning = false
-            startAutoAdvance()
-
-        case .silentPulse:
-            // Music returns → add left hand
+            // Add left hand on top — knees stay visible and graded
             phase = .offbeat
             guidesVisible.insert(.leftHand)
-            Task {
-                try? await Task.sleep(for: .milliseconds(300))
-                self.audioEngine.unsilenceAll(duration: 0.5)
-                self.audioEngine.unlock(.leftHand)
-            }
+            audioEngine.silenceAll(duration: 0.4)
+            isShowingTutorial = true
             isTransitioning = false
-            startAutoAdvance()
+
+        case .silentPulse:
+            // Reserved for future alternate mode
+            phase = .offbeat
+            guidesVisible.insert(.leftHand)
+            isShowingTutorial = true
+            isTransitioning = false
 
         case .offbeat:
-            guidesVisible.remove(.leftHand)
+            // Add right hand on top — knees + leftHand stay
             phase = .melody
             guidesVisible.insert(.rightHand)
-            audioEngine.unlock(.rightHand)
+            audioEngine.silenceAll(duration: 0.4)
+            isShowingTutorial = true
             isTransitioning = false
-            startAutoAdvance()
 
         case .melody:
-            guidesVisible.remove(.rightHand)
+            // Add head on top — all previous parts stay
             phase = .accent
             guidesVisible.insert(.head)
-            audioEngine.unlock(.head)
+            audioEngine.silenceAll(duration: 0.4)
+            isShowingTutorial = true
             isTransitioning = false
-            startAutoAdvance()
 
         case .accent:
-            guidesVisible.removeAll()
-            phase = .freePlay
-            isTransitioning = false
-            startAutoAdvance()
-
-        case .freePlay:
             phase = .results
             audioEngine.stop()
             beatClock.stop()
             isTransitioning = false
 
-        case .results:
+        case .freePlay, .results:
             isTransitioning = false
         }
     }
@@ -335,5 +376,14 @@ final class PoseDetectorVM {
             guard !Task.isCancelled else { return }
             self.moveToNextPhase()
         }
+    }
+    
+    // MARK: - Helpers
+    
+    private func clearHitHistory() {
+        correctHits.removeAll()
+        wrongHits.removeAll()
+        missedHits.removeAll()
+        activeMovements.removeAll()
     }
 }

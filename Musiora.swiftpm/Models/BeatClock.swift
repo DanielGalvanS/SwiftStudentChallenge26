@@ -23,6 +23,8 @@ final class BeatClock {
     private var task: Task<Void, Never>?
 
     func start() {
+        task?.cancel()  // always cancel previous task before starting a new one
+        task = nil
         isRunning = true
         let startTime = Date()
         task = Task { [weak self] in

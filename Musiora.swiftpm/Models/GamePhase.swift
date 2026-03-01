@@ -31,7 +31,7 @@ enum GamePhase: Equatable {
     var targetHits: Int {
         switch self {
         case .pulse:               return 6
-        case .silentPulse:         return 4
+        case .silentPulse:         return 6
         case .offbeat:             return 6
         case .melody:              return 6
         case .accent:              return 4
@@ -39,20 +39,30 @@ enum GamePhase: Equatable {
         }
     }
 
-    /// Time limit before auto-advancing (seconds)
+    /// Time limit before auto-advancing (seconds). 0 means wait for targetHits.
     var timeLimit: TimeInterval {
         switch self {
-        case .pulse:               return 45
-        case .silentPulse:         return 20
-        case .offbeat:             return 45
-        case .melody:              return 45
-        case .accent:              return 30
-        case .freePlay:            return 30
-        case .results:             return 0
+        case .pulse, .silentPulse, .offbeat, .melody, .accent, .results: 
+            return 0 // Must complete required hits
+        case .freePlay:            
+            return 30
         }
     }
 
-    /// Instruction shown to the user
+    /// Title shown in the HUD
+    var title: String {
+        switch self {
+        case .pulse:       return "Act 1: The Pulse"
+        case .silentPulse: return "Dalcroze Challenge"
+        case .offbeat:     return "Act 2: The Snare"
+        case .melody:      return "Act 3: The Cymbal"
+        case .accent:      return "Act 4: The Accent"
+        case .freePlay:    return "Grand Finale"
+        case .results:     return "Results"
+        }
+    }
+
+    /// Instruction shown to the user during gameplay
     var instruction: String {
         switch self {
         case .pulse:       return "Tap your knees like a bass drum 🥁"
@@ -60,8 +70,41 @@ enum GamePhase: Equatable {
         case .offbeat:     return "Hit the air with your left hand like a snare 🥁"
         case .melody:      return "Hit the air with your right hand like a cymbal 🥁"
         case .accent:      return "Nod your head to the accent 🧑‍🎤"
-        case .freePlay:    return "Play all parts! Motor independence!"
+        case .freePlay:    return "All four parts — hit them all! 🥁"
         case .results:     return ""
+        }
+    }
+
+    /// Detailed instruction shown before the phase begins
+    var tutorialText: String {
+        switch self {
+        case .pulse:       
+            return "The circles at the bottom show the beat. Tap your knees like a bass drum exactly when the circle lights up! You need 6 correct hits to advance."
+        case .silentPulse: 
+            return "The music will stop, but the beat continues in your head. Keep tapping your knees to the internal rhythm."
+        case .offbeat:     
+            return "Let's add a snare drum. Hit the air with your left hand exactly when its guide lights up."
+        case .melody:      
+            return "Time for the cymbal! Hit the air with your right hand on the new rhythm."
+        case .accent:      
+            return "Finally, nod your head on beat 1 like a true drummer."
+        case .freePlay:
+            return "Now all four parts at once — knees, left hand, right hand, and head. Hit each one at the right moment. You have 30 seconds. Go!"
+        case .results:     
+            return "Well done!"
+        }
+    }
+
+    /// The SF Symbol icon used to teach the movement
+    var iconName: String {
+        switch self {
+        case .pulse:       return "arrow.down.app.fill"
+        case .silentPulse: return "speaker.slash.fill"
+        case .offbeat:     return "hand.point.up.left.fill"
+        case .melody:      return "hand.point.up.right.fill"
+        case .accent:      return "person.fill"
+        case .freePlay:    return "music.quarternote.3"
+        case .results:     return "star.fill"
         }
     }
 }

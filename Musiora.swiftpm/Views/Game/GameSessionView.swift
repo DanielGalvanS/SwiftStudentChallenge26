@@ -14,14 +14,17 @@ struct GameSessionView: View {
                 CameraPreviewView(session: pose.session)
                     .ignoresSafeArea()
 
-                BodyLabelsOverlay(
-                    bodyPoints: pose.bodyPoints,
-                    size: geo.size,
-                    activeMovements: pose.activeMovements
-                )
+                if pose.gameActive && !pose.isCountingDown {
+                    BodyLabelsOverlay(
+                        bodyPoints: pose.bodyPoints,
+                        size: geo.size,
+                        activeMovements: pose.activeMovements,
+                        scores: pose.score
+                    )
+                }
 
                 // ── AR start button & Calibration ──────────────────────────
-                if !pose.gameActive && !pose.isCountingDown {
+                if !pose.gameActive && !pose.isCountingDown && !pose.hasStarted && !pose.isShowingTutorial {
                     GameStartHUD(
                         progress: pose.startProgress,
                         isCalibrated: pose.isCalibrated
@@ -52,23 +55,39 @@ struct GameSessionView: View {
                 }
 
                 // ── Phase instruction ──────────────────────────────────────
-                GamePhaseHUD(
-                    phase: pose.phase,
-                    isPaused: pose.isPaused
-                )
+                if pose.gameActive && !pose.isCountingDown {
+                    GamePhaseHUD(
+                        phase: pose.phase,
+                        isPaused: pose.isPaused,
+                        phaseHits: pose.phaseHits
+                    )
+                }
 
                 // ── Rhythm Guide ───────────────────────────────────────────
-                VStack {
-                    Spacer()
-                    RhythmGuidePanel(
-                        currentBeat: pose.currentBeat,
-                        correctHits: pose.correctHits,
-                        missedHits: pose.missedHits,
-                        wrongHits: pose.wrongHits,
-                        guidesVisible: pose.guidesVisible
+                if pose.gameActive && !pose.isCountingDown {
+                    VStack {
+                        Spacer()
+                        RhythmGuidePanel(
+                            currentBeat: pose.currentBeat,
+                            correctHits: pose.correctHits,
+                            missedHits: pose.missedHits,
+                            wrongHits: pose.wrongHits,
+                            guidesVisible: pose.guidesShown
+                        )
+                        .padding(.bottom, 80)
+                        .animation(.easeInOut(duration: 0.4), value: pose.guidesVisible)
+                    }
+                }
+                
+                // ── Tutorial Overlay ───────────────────────────────────────
+                if pose.isShowingTutorial {
+                    TutorialOverlay(
+                        phase: pose.phase,
+                        onReady: {
+                            pose.dismissTutorial()
+                        }
                     )
-                    .padding(.bottom, 80)
-                    .animation(.easeInOut(duration: 0.4), value: pose.guidesVisible)
+                    .zIndex(100)
                 }
             }
         }

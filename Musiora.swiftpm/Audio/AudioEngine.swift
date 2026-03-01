@@ -11,6 +11,7 @@
 final class AudioEngine {
     private let engine  = AVAudioEngine()
     private var players: [BodyPart: AVAudioPlayerNode] = [:]
+    private var buffers: [BodyPart: AVAudioPCMBuffer] = [:]
     private var savedVolumes: [BodyPart: Float] = [:]
     private(set) var isReady = false
 
@@ -54,9 +55,9 @@ final class AudioEngine {
             let player = AVAudioPlayerNode()
             engine.attach(player)
             engine.connect(player, to: engine.mainMixerNode, format: buffer.format)
-            player.scheduleBuffer(buffer, at: nil, options: .loops)
             player.volume = 0
             players[part] = player
+            buffers[part] = buffer
         }
 
         guard !players.isEmpty else {
@@ -77,16 +78,19 @@ final class AudioEngine {
 
     func startLoops() {
         guard isReady else { return }
-        // Sync all tracks to the exact same AVAudioTime
-        if let renderTime = engine.outputNode.lastRenderTime,
-           renderTime.isSampleTimeValid {
-            let startSample = renderTime.sampleTime + AVAudioFramePosition(renderTime.sampleRate * 0.1)
-            let startTime   = AVAudioTime(sampleTime: startSample, atRate: renderTime.sampleRate)
-            players.values.forEach { $0.play(at: startTime) }
-        } else {
-            players.values.forEach { $0.play() }
+        players.values.forEach { $0.play() }
+    }
+
+    /// Stop all players, re-schedule their buffers from the top, then play them together.
+    /// Call this at the exact same moment as BeatClock.start() to guarantee sync.
+    func syncAndPlay() {
+        guard isReady else { return }
+        for (part, player) in players {
+            guard let buffer = buffers[part] else { continue }
+            player.stop()
+            player.scheduleBuffer(buffer, at: nil, options: .loops)
         }
-        setVolume(1.0, for: .knees)
+        players.values.forEach { $0.play() }
     }
 
     func stop() {
@@ -146,16 +150,7 @@ final class AudioEngine {
 
     private func fade(part: BodyPart, to target: Float, duration: TimeInterval) {
         guard let player = players[part] else { return }
-        let start    = player.volume
-        let steps    = 12
-        let delta    = (target - start) / Float(steps)
-        let stepTime = duration / Double(steps)
-
-        for i in 1...steps {
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(stepTime * Double(i)))
-                player.volume = start + delta * Float(i)
-            }
-        }
+        // Snap the volume instantly to prevent async races overlapping with Game State changes
+        player.volume = target
     }
 }
