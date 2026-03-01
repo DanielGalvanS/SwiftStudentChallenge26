@@ -55,12 +55,12 @@ enum GamePhase: Equatable {
     /// Instruction shown to the user
     var instruction: String {
         switch self {
-        case .pulse:       return "March to the beat with your knees"
-        case .silentPulse: return "Keep marching... without music"
-        case .offbeat:     return "Add your left hand"
-        case .melody:      return "Add your right hand"
-        case .accent:      return "Nod your head on beat 1"
-        case .freePlay:    return "Motor independence!"
+        case .pulse:       return "Tap your knees like a bass drum 🥁"
+        case .silentPulse: return "Keep the bass drum going... without music 🥁"
+        case .offbeat:     return "Hit the air with your left hand like a snare 🥁"
+        case .melody:      return "Hit the air with your right hand like a cymbal 🥁"
+        case .accent:      return "Nod your head to the accent 🧑‍🎤"
+        case .freePlay:    return "Play all parts! Motor independence!"
         case .results:     return ""
         }
     }

@@ -28,6 +28,10 @@ final class PoseDetectorVM {
     private(set) var activeMovements: Set<BodyPart> = []
     // Correct movement on the beat → green on rhythm guide
     private(set) var correctHits: Set<BodyPart> = []
+    // Incorrect movement off the beat → red on rhythm guide
+    private(set) var wrongHits: Set<BodyPart> = []
+    // Missed a required beat → red on rhythm guide
+    private(set) var missedHits: Set<BodyPart> = []
 
     // MARK: - Rhythm
 
@@ -37,7 +41,7 @@ final class PoseDetectorVM {
     )
 
     // MARK: - Game
-
+    
     private(set) var phase: GamePhase = .pulse
     private(set) var guidesVisible: Set<BodyPart> = [.knees]
     private(set) var gameActive: Bool = false   // true once the game starts
@@ -178,22 +182,45 @@ final class PoseDetectorVM {
     // MARK: - Beat
 
     private func handleBeat(_ beat: Int) {
-        currentBeat = beat
+        // Check for missed beats from the PREVIOUS beat before moving to the new one
         for part in BodyPart.allCases {
-            guard patterns[part]?[beat] == true else { continue }
-            score[part]?.attempts += 1
+            guard guidesVisible.contains(part) else { continue } // Only grade active parts
+            if patterns[part]?[currentBeat] == true && !correctHits.contains(part) {
+                flashMissed(part: part)
+            }
+        }
+        
+        // Clear old hits for the new beat
+        correctHits.removeAll()
+        wrongHits.removeAll()
+        missedHits.removeAll()
+        
+        currentBeat = beat
+        
+        // Register new attempts
+        for part in BodyPart.allCases {
+            guard guidesVisible.contains(part) else { continue }
+            if patterns[part]?[beat] == true {
+                score[part]?.attempts += 1
+            }
         }
     }
 
     // MARK: - Movement
 
     private func handleMovement(part: BodyPart) {
+        // Only provide error feedback if the part is actively visible/playing
+        guard guidesVisible.contains(part) else { return }
+        
         flash(part: part)
 
-        guard patterns[part]?[currentBeat] == true else { return }
-        score[part]?.hits += 1
-        flashCorrect(part: part)
-        checkPhaseProgress(for: part)
+        if patterns[part]?[currentBeat] == true {
+            score[part]?.hits += 1
+            flashCorrect(part: part)
+            checkPhaseProgress(for: part)
+        } else {
+            flashWrong(part: part)
+        }
     }
 
     private func flash(part: BodyPart) {
@@ -206,10 +233,22 @@ final class PoseDetectorVM {
 
     private func flashCorrect(part: BodyPart) {
         correctHits.insert(part)
+        // correctHits is cleared on the next beat manually
+    }
+    
+    private func flashWrong(part: BodyPart) {
+        wrongHits.insert(part)
+        HapticManager.shared.playError()
         Task {
             try? await Task.sleep(for: .milliseconds(300))
-            correctHits.remove(part)
+            wrongHits.remove(part)
         }
+    }
+    
+    private func flashMissed(part: BodyPart) {
+        missedHits.insert(part)
+        HapticManager.shared.playError()
+        // Missed hits clear automatically on the next beat
     }
 
     // MARK: - Phase progress

@@ -89,23 +89,27 @@ struct LabelBubble: View {
     let isActive: Bool
 
     var body: some View {
-        Text(text)
-            .font(.system(size: 13, weight: .black, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                Capsule()
-                    .fill(isActive ? color : color.opacity(0.6))
-                    .shadow(color: isActive ? color : .clear, radius: isActive ? 12 : 0)
-                    .overlay(
-                        Capsule().strokeBorder(
-                            isActive ? .white : .white.opacity(0.3),
-                            lineWidth: isActive ? 2 : 1
-                        )
-                    )
-            )
-            .scaleEffect(isActive ? 1.2 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.5), value: isActive)
+        ZStack {
+            // Drum pad outer ring
+            Circle()
+                .strokeBorder(
+                    isActive ? Theme.Colors.textPrimary : color.opacity(0.8),
+                    lineWidth: isActive ? 4 : 2
+                )
+                .frame(width: 80, height: 80)
+                .background(
+                    Circle()
+                        .fill(isActive ? color.opacity(0.8) : color.opacity(0.3))
+                )
+                .shadow(color: isActive ? color : .clear, radius: isActive ? 15 : 0)
+
+            // Label text inside the pad
+            Text(text)
+                .font(Theme.Typography.labelSmall)
+                .foregroundStyle(Theme.Colors.textPrimary)
+                .multilineTextAlignment(.center)
+        }
+        .scaleEffect(isActive ? 1.3 : 1.0)
+        .animation(.spring(response: 0.25, dampingFraction: 0.5), value: isActive)
     }
 }

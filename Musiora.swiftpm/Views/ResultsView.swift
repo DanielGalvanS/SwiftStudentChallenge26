@@ -15,79 +15,56 @@ struct ResultsView: View {
         ZStack {
             Color.black.opacity(0.95).ignoresSafeArea()
 
-            VStack(spacing: 32) {
+            VStack(spacing: Theme.Layout.paddingXLarge) {
                 Spacer()
 
                 // Título
                 VStack(spacing: 8) {
                     Text("Motor\nIndependence")
-                        .font(.system(size: 42, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(Theme.Typography.displaySmall)
+                        .foregroundStyle(Theme.Colors.textPrimary)
                         .multilineTextAlignment(.center)
 
                     Text("This is how musicians train at conservatories.")
-                        .font(.system(size: 15, weight: .regular, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .font(Theme.Typography.bodyMedium)
+                        .foregroundStyle(Theme.Colors.textTertiary)
                 }
 
                 // Accuracy per part
-                VStack(spacing: 14) {
-                    ForEach(BodyPart.allCases, id: \.self) { part in
-                        if let s = score[part] {
-                            HStack(spacing: 12) {
-                                Text(part.label)
-                                    .font(.system(size: 11, weight: .black, design: .rounded))
-                                    .foregroundStyle(part.color)
-                                    .frame(width: 72, alignment: .leading)
-
-                                // Accuracy bar
-                                GeometryReader { geo in
-                                    ZStack(alignment: .leading) {
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .fill(.white.opacity(0.1))
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .fill(part.color)
-                                            .frame(width: geo.size.width * CGFloat(s.accuracy))
-                                    }
-                                }
-                                .frame(height: 8)
-
-                                Text("\(Int(s.accuracy * 100))%")
-                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 42, alignment: .trailing)
+                GlassPanel {
+                    VStack(spacing: 14) {
+                        ForEach(BodyPart.allCases, id: \.self) { part in
+                            if let s = score[part] {
+                                AccuracyBarView(part: part, score: s)
                             }
                         }
                     }
                 }
-                .padding(.vertical, 22)
-                .padding(.horizontal, 20)
-                .background(.white.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 20))
                 .padding(.horizontal, 28)
 
                 // Mensaje final
                 Text("This is what pianists\ndedicate years to.\n\nYou just experienced it\nin 3 minutes.")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .font(Theme.Typography.bodyLarge)
+                    .foregroundStyle(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
 
                 Spacer()
 
                 // Restart button
-                Button(action: onRestart) {
+                Button(action: {
+                    HapticManager.shared.playLight()
+                    onRestart()
+                }) {
                     Text("Try Again")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 17)
-                        .background(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
-                .padding(.horizontal, 32)
+                .glassButtonStyle()
+                .padding(.horizontal, Theme.Layout.paddingXLarge)
                 .padding(.bottom, 48)
             }
+        }
+        .onAppear {
+            HapticManager.shared.playSuccess()
         }
     }
 }

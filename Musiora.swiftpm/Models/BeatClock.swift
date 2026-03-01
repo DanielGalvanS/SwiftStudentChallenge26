@@ -29,7 +29,7 @@ final class BeatClock {
             var beatIndex = 0
             while !Task.isCancelled {
                 guard let self else { break }
-                await self.tick()
+                self.tick()
                 beatIndex += 1
                 // Calculates when the NEXT beat should fire from the absolute start time
                 // → auto-corrects any accumulated drift from previous beats
